@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     trusted_hosts_raw: str = "127.0.0.1,localhost"
     force_https: bool = False
     api_auth_secret: str = "local-dev-auth-secret-change-me"
+    api_auth_key_name: str = "X-API-KEY"
 
     provider_name: str = "mistral"
     provider_model: str = "mistral-large-latest"

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -8,6 +8,7 @@ from server.api import router as api_router
 
 # Project Imports
 from server.config import SCREENSHOT_DIR, get_settings
+from server.dependencies import api_key_auth
 
 settings = get_settings()
 
@@ -37,7 +38,11 @@ if settings.trusted_hosts:
 if settings.force_https:
     app.add_middleware(HTTPSRedirectMiddleware)
 
-app.include_router(api_router, prefix="/api")
+app.include_router(
+    api_router,
+    prefix="/api",
+    dependencies=[Depends(api_key_auth)],
+)
 
 
 @app.get("/", tags=["meta"], status_code=200)
