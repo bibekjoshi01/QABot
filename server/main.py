@@ -40,6 +40,6 @@ if settings.force_https:
 app.include_router(api_router, prefix="/api")
 
 
-@app.get("/", tags=["meta"])
+@app.get("/", tags=["meta"], status_code=200)
 async def root() -> dict[str, str]:
     return {"service": "Backend Service QA Engineer Bot", "status": "ok"}
