@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #0b0f14;
+  color: #e2e8f0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+* {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.cyber-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cyber-scroll::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.3);
+  border-radius: 999px;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.55);
+  animation: drift 6s ease-in-out infinite;
+}
+
+.particle-1 { left: 6%; bottom: 15%; animation-delay: 0.1s; }
+.particle-2 { left: 12%; bottom: 70%; animation-delay: 0.6s; }
+.particle-3 { left: 19%; bottom: 38%; animation-delay: 0.4s; }
+.particle-4 { left: 24%; bottom: 82%; animation-delay: 1.1s; }
+.particle-5 { left: 32%; bottom: 12%; animation-delay: 0.2s; }
+.particle-6 { left: 41%; bottom: 62%; animation-delay: 1.2s; }
+.particle-7 { left: 47%; bottom: 24%; animation-delay: 0.8s; }
+.particle-8 { left: 54%; bottom: 77%; animation-delay: 1.6s; }
+.particle-9 { left: 61%; bottom: 44%; animation-delay: 0.5s; }
+.particle-10 { left: 68%; bottom: 18%; animation-delay: 1.5s; }
+.particle-11 { left: 74%; bottom: 66%; animation-delay: 1.1s; }
+.particle-12 { left: 79%; bottom: 31%; animation-delay: 0.3s; }
+.particle-13 { left: 84%; bottom: 73%; animation-delay: 0.9s; }
+.particle-14 { left: 90%; bottom: 13%; animation-delay: 1.4s; }
+.particle-15 { left: 95%; bottom: 48%; animation-delay: 0.7s; }
