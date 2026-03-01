@@ -219,6 +219,7 @@ class PlaywrightComputerTool(BaseTool):
 
         self._console_events: list[str] = []
         self._request_failures: list[str] = []
+        self._response_events: list[dict[str, Any]] = []
         self._startup_error: str | None = None
 
     @property
@@ -243,6 +244,10 @@ class PlaywrightComputerTool(BaseTool):
     async def get_request_failures(self, limit: int = 50) -> list[str]:
         await self._ensure_browser()
         return self._request_failures[-limit:]
+
+    async def get_network_responses(self, limit: int = 120) -> list[dict[str, Any]]:
+        await self._ensure_browser()
+        return self._response_events[-limit:]
 
     async def navigate(self, url: str) -> None:
         await self._ensure_browser()
@@ -280,7 +285,12 @@ class PlaywrightComputerTool(BaseTool):
             """
         )
 
-    async def attempt_login(self, username: str, password: str) -> dict[str, Any]:
+    async def attempt_login(
+        self,
+        username: str,
+        password: str,
+        verification: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         await self._ensure_browser()
         assert self._page is not None
         assert self._context is not None
@@ -312,48 +322,68 @@ class PlaywrightComputerTool(BaseTool):
         username_filled = False
         password_filled = False
         submitted = False
+        login_responses: list[dict[str, Any]] = []
 
-        for selector in user_selectors:
-            el = await self._page.query_selector(selector)
-            if el:
-                try:
-                    await el.fill(username)
-                    username_filled = True
-                    break
-                except Exception:
-                    pass
-
-        for selector in pass_selectors:
-            el = await self._page.query_selector(selector)
-            if el:
-                try:
-                    await el.fill(password)
-                    password_filled = True
-                    break
-                except Exception:
-                    pass
-
-        for selector in submit_selectors:
-            el = await self._page.query_selector(selector)
-            if el:
-                try:
-                    await el.click(timeout=5000)
-                    submitted = True
-                    break
-                except Exception:
-                    pass
-
-        if not submitted and password_filled:
+        def on_response(resp: Any):
             try:
-                await self._page.keyboard.press("Enter")
-                submitted = True
+                req = getattr(resp, "request", None)
+                login_responses.append(
+                    {
+                        "url": getattr(resp, "url", ""),
+                        "status": getattr(resp, "status", None),
+                        "method": getattr(req, "method", ""),
+                        "resource_type": getattr(req, "resource_type", ""),
+                    }
+                )
             except Exception:
                 pass
 
+        self._page.on("response", on_response)
+
         try:
-            await self._page.wait_for_load_state("domcontentloaded", timeout=8000)
-        except Exception:
-            pass
+            for selector in user_selectors:
+                el = await self._page.query_selector(selector)
+                if el:
+                    try:
+                        await el.fill(username)
+                        username_filled = True
+                        break
+                    except Exception:
+                        pass
+
+            for selector in pass_selectors:
+                el = await self._page.query_selector(selector)
+                if el:
+                    try:
+                        await el.fill(password)
+                        password_filled = True
+                        break
+                    except Exception:
+                        pass
+
+            for selector in submit_selectors:
+                el = await self._page.query_selector(selector)
+                if el:
+                    try:
+                        await el.click(timeout=5000)
+                        submitted = True
+                        break
+                    except Exception:
+                        pass
+
+            if not submitted and password_filled:
+                try:
+                    await self._page.keyboard.press("Enter")
+                    submitted = True
+                except Exception:
+                    pass
+
+            try:
+                await self._page.wait_for_load_state("domcontentloaded", timeout=8000)
+            except Exception:
+                pass
+        finally:
+            self._page.remove_listener("response", on_response)
 
         after_url = self._page.url
         after_cookies = await self._context.cookies()
@@ -376,7 +406,93 @@ class PlaywrightComputerTool(BaseTool):
         except Exception:
             pass
 
-        likely_success = bool(submitted and ((after_url != before_url) or len(added_cookie_names) > 0) and not error_text_detected)
+        verification = verification or {}
+        configured_checks = {
+            "auth_api_endpoint_contains": bool(str(verification.get("auth_api_endpoint_contains") or "").strip()),
+            "success_selector": bool(str(verification.get("success_selector") or "").strip()),
+            "auth_state_js": bool(str(verification.get("auth_state_js") or "").strip()),
+            "token_storage_key": bool(str(verification.get("token_storage_key") or "").strip()),
+        }
+
+        deterministic_signals: dict[str, Any] = {}
+        if configured_checks["auth_api_endpoint_contains"]:
+            endpoint = str(verification.get("auth_api_endpoint_contains")).strip().lower()
+            matching = [item for item in login_responses if endpoint in str(item.get("url", "")).lower()]
+            auth_api_success = any(
+                isinstance(item.get("status"), int) and 200 <= int(item["status"]) < 300
+                for item in matching
+            )
+            deterministic_signals["auth_api_success"] = auth_api_success
+            deterministic_signals["auth_api_matches"] = matching[:20]
+
+        if configured_checks["success_selector"]:
+            selector = str(verification.get("success_selector")).strip()
+            selector_visible = False
+            try:
+                el = await self._page.query_selector(selector)
+                selector_visible = bool(el and await el.is_visible())
+            except Exception:
+                selector_visible = False
+            deterministic_signals["success_selector_visible"] = selector_visible
+
+        if configured_checks["auth_state_js"]:
+            expr = str(verification.get("auth_state_js")).strip()
+            auth_state_flag = False
+            try:
+                auth_state_flag = bool(await self._page.evaluate(f"() => Boolean({expr})"))
+            except Exception:
+                auth_state_flag = False
+            deterministic_signals["auth_state_flag"] = auth_state_flag
+
+        if configured_checks["token_storage_key"]:
+            token_key = str(verification.get("token_storage_key")).strip()
+            token_present = False
+            try:
+                token_present = bool(
+                    await self._page.evaluate(
+                        """
+                        (key) => {
+                            try {
+                                const local = window.localStorage?.getItem(key);
+                                const session = window.sessionStorage?.getItem(key);
+                                return Boolean(local || session);
+                            } catch (e) {
+                                return false;
+                            }
+                        }
+                        """,
+                        token_key,
+                    )
+                )
+            except Exception:
+                token_present = False
+            deterministic_signals["token_storage_key_present"] = token_present
+
+        configured_signal_values = [
+            deterministic_signals.get("auth_api_success"),
+            deterministic_signals.get("success_selector_visible"),
+            deterministic_signals.get("auth_state_flag"),
+            deterministic_signals.get("token_storage_key_present"),
+        ]
+        has_configured_deterministic_checks = any(configured_checks.values())
+        deterministic_pass = (
+            has_configured_deterministic_checks
+            and all(value is True for value in configured_signal_values if value is not None)
+        )
+
+        heuristic_signals = {
+            "url_changed": after_url != before_url,
+            "cookie_added": len(added_cookie_names) > 0,
+            "error_text_absent": not error_text_detected,
+        }
+        heuristic_pass = bool(
+            submitted
+            and (heuristic_signals["url_changed"] or heuristic_signals["cookie_added"])
+            and heuristic_signals["error_text_absent"]
+        )
+
+        verification_mode = "deterministic" if has_configured_deterministic_checks else "heuristic"
+        likely_success = deterministic_pass if has_configured_deterministic_checks else heuristic_pass
         return {
             "before_url": before_url,
             "after_url": after_url,
@@ -385,6 +501,11 @@ class PlaywrightComputerTool(BaseTool):
             "submitted": submitted,
             "added_cookie_names": added_cookie_names,
             "error_text_detected": error_text_detected,
+            "login_response_events": login_responses[-30:],
+            "verification_mode": verification_mode,
+            "configured_checks": configured_checks,
+            "deterministic_signals": deterministic_signals,
+            "heuristic_signals": heuristic_signals,
             "likely_success": likely_success,
         }
 
@@ -513,6 +634,7 @@ class PlaywrightComputerTool(BaseTool):
             "requestfailed",
             lambda req: self._request_failures.append(self._format_request_failure(req)),
         )
+        self._page.on("response", self._record_response_event)
 
         if self._network and self._network.get("latency") is not None:
             try:
@@ -552,6 +674,19 @@ class PlaywrightComputerTool(BaseTool):
         else:
             reason = getattr(failure, "error_text", None) or str(failure)
         return f"{request.method} {request.url} :: {reason}"
+
+    def _record_response_event(self, response: Any) -> None:
+        try:
+            req = getattr(response, "request", None)
+            event = {
+                "url": getattr(response, "url", ""),
+                "status": getattr(response, "status", None),
+                "method": getattr(req, "method", ""),
+                "resource_type": getattr(req, "resource_type", ""),
+            }
+            self._response_events.append(event)
+        except Exception:
+            pass
 
     async def _take_screenshot(self) -> ToolExecutionResult:
         assert self._page is not None
@@ -765,3 +900,4 @@ class PlaywrightComputerTool(BaseTool):
         self._page = None
         self._console_events = []
         self._request_failures = []
+        self._response_events = []

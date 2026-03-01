@@ -37,7 +37,9 @@ Rules:
 - For form-related flows, run `form_validator` to verify required fields, labels, and submit controls.
 - For click interaction checks, run `button_click_checker` to detect broken anchors and weak clickable patterns.
 - For authentication flows, run `login_flow_checker` (with credentials when available) to verify login behavior.
+- Prefer deterministic auth checks when possible (`auth_api_endpoint_contains`, `success_selector`, `auth_state_js`, `token_storage_key`).
 - For session behavior checks, run `session_persistence_checker` to verify cookie persistence across reload.
+- Use `network_tab_analyzer` to validate API reliability signals and support root-cause analysis for functional/auth issues.
 - If blocked by CAPTCHA/OTP/auth walls, report that explicitly and continue with public flows.
 - Do not invent findings from prior knowledge or simulation.
 - If tools fail or evidence is insufficient, return only blocker issues tied to tool errors.

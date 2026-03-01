@@ -1,13 +1,14 @@
 from .base import BaseTool, ToolExecutionResult
 from .bash import BashTool
 from .collection import ToolCollection
-from .functional_tools import (
+from .functional import (
     ButtonClickCheckerTool,
     DeadLinkCheckerTool,
     FormValidatorTool,
     LoginFlowCheckerTool,
     SessionPersistenceCheckerTool,
 )
+from .console import NetworkTabAnalyzerTool
 
 try:
     from .audit_tools import (
@@ -33,6 +34,7 @@ __all__ = [
     "ButtonClickCheckerTool",
     "LoginFlowCheckerTool",
     "SessionPersistenceCheckerTool",
+    "NetworkTabAnalyzerTool",
     "PlaywrightComputerTool",
     "BashTool",
     "PageAuditTool",

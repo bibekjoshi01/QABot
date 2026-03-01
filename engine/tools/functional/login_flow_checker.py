@@ -28,6 +28,10 @@ class LoginFlowCheckerTool(BaseTool):
             "url": {"type": "string"},
             "username": {"type": "string"},
             "password": {"type": "string"},
+            "auth_api_endpoint_contains": {"type": "string"},
+            "success_selector": {"type": "string"},
+            "auth_state_js": {"type": "string"},
+            "token_storage_key": {"type": "string"},
         },
         "required": [],
     }
@@ -47,6 +51,13 @@ class LoginFlowCheckerTool(BaseTool):
 
         username = str(arguments.get("username") or "").strip()
         password = str(arguments.get("password") or "").strip()
+        verification = {
+            "auth_api_endpoint_contains": str(arguments.get("auth_api_endpoint_contains") or "").strip(),
+            "success_selector": str(arguments.get("success_selector") or "").strip(),
+            "auth_state_js": str(arguments.get("auth_state_js") or "").strip(),
+            "token_storage_key": str(arguments.get("token_storage_key") or "").strip(),
+        }
+        verification = {k: v for k, v in verification.items() if v}
 
         try:
             if self._computer.current_url != target_url:
@@ -61,6 +72,10 @@ class LoginFlowCheckerTool(BaseTool):
             "login_surface": surface,
             "attempted_login": False,
             "login_result": None,
+            "verification": {
+                "mode": "deterministic" if verification else "heuristic",
+                "requested_checks": verification,
+            },
             "finding_details": finding_details,
             "findings": [],
         }
@@ -109,12 +124,49 @@ class LoginFlowCheckerTool(BaseTool):
             )
 
         try:
-            login_result = await self._computer.attempt_login(username=username, password=password)
+            try:
+                login_result = await self._computer.attempt_login(
+                    username=username,
+                    password=password,
+                    verification=verification,
+                )
+            except TypeError:
+                # Backward compatibility for test doubles or older browser tool implementations.
+                login_result = await self._computer.attempt_login(username=username, password=password)
         except Exception as exc:
             return ToolExecutionResult(success=False, error=f"Failed to execute login attempt: {exc}")
 
         payload["attempted_login"] = True
         payload["login_result"] = login_result
+
+        mode = str(login_result.get("verification_mode") or ("deterministic" if verification else "heuristic"))
+        if mode == "deterministic":
+            if login_result.get("likely_success"):
+                finding_details.append(
+                    {
+                        "code": "deterministic_verification_passed",
+                        "severity": "info",
+                        "location": str(login_result.get("after_url") or target_url),
+                        "message": "Deterministic login checks passed.",
+                        "evidence": {
+                            "configured_checks": login_result.get("configured_checks", {}),
+                            "deterministic_signals": login_result.get("deterministic_signals", {}),
+                        },
+                    }
+                )
+            else:
+                finding_details.append(
+                    {
+                        "code": "deterministic_verification_failed",
+                        "severity": "high",
+                        "location": str(login_result.get("after_url") or target_url),
+                        "message": "Deterministic login checks did not pass.",
+                        "evidence": {
+                            "configured_checks": login_result.get("configured_checks", {}),
+                            "deterministic_signals": login_result.get("deterministic_signals", {}),
+                        },
+                    }
+                )
 
         if login_result.get("likely_success"):
             finding_details.append(
@@ -122,7 +174,7 @@ class LoginFlowCheckerTool(BaseTool):
                     "code": "login_attempt_likely_successful",
                     "severity": "info",
                     "location": str(login_result.get("after_url") or target_url),
-                    "message": "Login attempt appears successful (URL/cookie state changed).",
+                    "message": "Login attempt appears successful.",
                     "evidence": login_result,
                 }
             )

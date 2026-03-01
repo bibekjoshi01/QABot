@@ -6,14 +6,26 @@ from engine.core.types import QAResult, QATask
 from engine.prompts import build_system_prompt, build_user_prompt
 from engine.providers import ProviderFactory
 from engine.tools import (
+    ButtonClickCheckerTool,
+    DeadLinkCheckerTool,
+    FormValidatorTool,
+    LoginFlowCheckerTool,
+    NetworkTabAnalyzerTool,
     PlaywrightComputerTool,
+    SessionPersistenceCheckerTool,
     ToolCollection,
 )
-from engine.tools.security import (
-    SecurityContentAuditTool,
-    SecurityHeadersAuditTool,
-    SSLAuditTool,
-)
+
+try:
+    from engine.tools.security import (
+        SecurityContentAuditTool,
+        SecurityHeadersAuditTool,
+        SSLAuditTool,
+    )
+except ModuleNotFoundError:
+    SecurityContentAuditTool = None  # type: ignore[assignment]
+    SecurityHeadersAuditTool = None  # type: ignore[assignment]
+    SSLAuditTool = None  # type: ignore[assignment]
 
 
 class Engine:
@@ -48,6 +60,11 @@ class Engine:
         self.network_profile = network_profile
 
     def _build_default_tools(self, target_url: str) -> ToolCollection:
+        if PlaywrightComputerTool is None:
+            raise RuntimeError("Playwright is not installed. Install it to use browser-backed tools.")
+        if SSLAuditTool is None or SecurityHeadersAuditTool is None or SecurityContentAuditTool is None:
+            raise RuntimeError("Security toolchain is unavailable because dependencies failed to load.")
+
         computer_tool = PlaywrightComputerTool(
             target_url=target_url,
             locale=self.locale,
@@ -57,6 +74,12 @@ class Engine:
 
         return ToolCollection(
             [
+                DeadLinkCheckerTool(fallback_url=target_url),
+                FormValidatorTool(fallback_url=target_url),
+                ButtonClickCheckerTool(fallback_url=target_url),
+                LoginFlowCheckerTool(computer_tool=computer_tool, fallback_url=target_url),
+                SessionPersistenceCheckerTool(computer_tool=computer_tool, fallback_url=target_url),
+                NetworkTabAnalyzerTool(computer_tool=computer_tool),
                 SSLAuditTool(fallback_url=target_url),
                 SecurityHeadersAuditTool(fallback_url=target_url),
                 SecurityContentAuditTool(computer_tool=computer_tool),

@@ -22,7 +22,7 @@ class _FakeComputer:
             "forms_with_password_count": 1,
         }
 
-    async def attempt_login(self, username: str, password: str):
+    async def attempt_login(self, username: str, password: str, verification=None):
         assert username == "user@example.com"
         assert password == "secret"
         return {
@@ -33,6 +33,14 @@ class _FakeComputer:
             "submitted": True,
             "added_cookie_names": ["sessionid"],
             "error_text_detected": False,
+            "verification_mode": "deterministic" if verification else "heuristic",
+            "configured_checks": {
+                "auth_api_endpoint_contains": bool(verification and verification.get("auth_api_endpoint_contains")),
+                "success_selector": bool(verification and verification.get("success_selector")),
+                "auth_state_js": bool(verification and verification.get("auth_state_js")),
+                "token_storage_key": bool(verification and verification.get("token_storage_key")),
+            },
+            "deterministic_signals": {"auth_api_success": True} if verification else {},
             "likely_success": True,
         }
 
@@ -50,3 +58,20 @@ async def test_login_flow_checker_attempts_login_with_credentials():
     codes = {item["code"] for item in payload["finding_details"]}
     assert "login_surface_detected" in codes
     assert "login_attempt_likely_successful" in codes
+
+
+@pytest.mark.asyncio
+async def test_login_flow_checker_uses_deterministic_verification_when_requested():
+    tool = LoginFlowCheckerTool(computer_tool=_FakeComputer(), fallback_url="https://example.com/login")
+    result = await tool.execute(
+        {
+            "username": "user@example.com",
+            "password": "secret",
+            "auth_api_endpoint_contains": "/api/auth/login",
+        }
+    )
+
+    assert result.success is True
+    payload = json.loads(result.output or "{}")
+    codes = {item["code"] for item in payload["finding_details"]}
+    assert "deterministic_verification_passed" in codes
