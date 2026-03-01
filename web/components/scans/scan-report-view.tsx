@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { createMockReport } from "@/lib/mock-data";
-import { ScanIssue, ScanReport } from "@/types/scan";
+import { DeviceProfile, NetworkProfile, ScanIssue, ScanReport } from "@/types/scan";
 
 const sections = [
   { key: "overview", label: "Overview" },
@@ -49,8 +49,8 @@ export function ScanReportView({ scanId }: { scanId: string }) {
       return {
         ...createMockReport({
           targetUrl: "https://example.com",
-          deviceProfile: "Desktop",
-          networkProfile: "WiFi"
+          deviceProfile: DeviceProfile.DESKTOP,
+          networkProfile: NetworkProfile.WIFI
         }),
         id: scanId
       };

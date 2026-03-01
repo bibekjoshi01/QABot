@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { ScanPayload, ScanReport } from "@/types/scan";
+import { DeviceProfile, NetworkProfile, ScanPayload, ScanReport } from "@/types/scan";
 
 const steps = [
   "Connecting to target",
@@ -22,8 +22,8 @@ const steps = [
 
 export function NewScanForm() {
   const [targetUrl, setTargetUrl] = useState("https://example.com");
-  const [deviceProfile, setDeviceProfile] = useState<ScanPayload["deviceProfile"]>("Desktop");
-  const [networkProfile, setNetworkProfile] = useState<ScanPayload["networkProfile"]>("WiFi");
+  const [deviceProfile, setDeviceProfile] = useState<ScanPayload["deviceProfile"]>(DeviceProfile.DESKTOP);
+  const [networkProfile, setNetworkProfile] = useState<ScanPayload["networkProfile"]>(NetworkProfile.WIFI);
   const [contextJson, setContextJson] = useState('{"mission":"baseline"}');
   const [stepIndex, setStepIndex] = useState(0);
   const [history, setHistory] = useLocalStorage<ScanReport[]>("qa-agent-history", []);
@@ -77,17 +77,17 @@ export function NewScanForm() {
             <div>
               <label className="mb-2 block text-xs uppercase tracking-wide text-slate-400">Device Profile</label>
               <Select value={deviceProfile} onChange={(e) => setDeviceProfile(e.target.value as ScanPayload["deviceProfile"])}>
-                <option>iPhone 14</option>
-                <option>Desktop</option>
-                <option>Tablet</option>
+                <option value={DeviceProfile.IPHONE_14}>iPhone 14</option>
+                <option value={DeviceProfile.DESKTOP}>Desktop</option>
+                <option value={DeviceProfile.DESKTOP_1440}>Desktop 1440</option>
               </Select>
             </div>
             <div>
               <label className="mb-2 block text-xs uppercase tracking-wide text-slate-400">Network Profile</label>
               <Select value={networkProfile} onChange={(e) => setNetworkProfile(e.target.value as ScanPayload["networkProfile"])}>
-                <option>WiFi</option>
-                <option>4G</option>
-                <option>Slow 3G</option>
+                <option value={NetworkProfile.WIFI}>WiFi</option>
+                <option value={NetworkProfile.FOUR_G}>4G</option>
+                <option value={NetworkProfile.SLOW_3G}>Slow 3G</option>
               </Select>
             </div>
           </div>

@@ -3,7 +3,25 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+  --surface-bg: #f7f6f2;
+  --surface-fg: #0f172a;
+  --surface-muted: #475569;
+  --surface-card: #ffffff;
+  --surface-border: #e2e8f0;
+  --surface-accent: #0f172a;
+  --surface-accent-fg: #ffffff;
+}
+
+.dark {
   color-scheme: dark;
+  --surface-bg: #0b1220;
+  --surface-fg: #e5e7eb;
+  --surface-muted: #94a3b8;
+  --surface-card: #111827;
+  --surface-border: #334155;
+  --surface-accent: #e2e8f0;
+  --surface-accent-fg: #0f172a;
 }
 
 html,
@@ -12,8 +30,8 @@ body {
 }
 
 body {
-  background: #0b0f14;
-  color: #e2e8f0;
+  background: var(--surface-bg);
+  color: var(--surface-fg);
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 

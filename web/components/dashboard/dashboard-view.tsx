@@ -8,7 +8,7 @@ import { createMockReport } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { ScanReport } from "@/types/scan";
+import { DeviceProfile, NetworkProfile, ScanReport } from "@/types/scan";
 
 function useLatestReport() {
   return useQuery({
@@ -23,8 +23,8 @@ function useLatestReport() {
       }
       return createMockReport({
         targetUrl: "https://www.tabflux.com/",
-        deviceProfile: "Desktop",
-        networkProfile: "WiFi"
+        deviceProfile: DeviceProfile.DESKTOP,
+        networkProfile: NetworkProfile.WIFI
       });
     }
   });
