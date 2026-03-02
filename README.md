@@ -8,7 +8,7 @@ This repository contains an AI-powered QA platform with:
 
 For architecture details, see [architecure.md](./architecure.md).
 
-<img width="1167" height="653" alt="Screenshot 2026-03-02 at 12 07 54" src="https://github.com/user-attachments/assets/717231c8-4cfc-46ae-a4f6-837122b4dc9c" />
+![Uploading Screenshot 2026-03-02 at 12.29.48.png…]()
 
 
 ## 1. What This System Does
