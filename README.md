@@ -6,7 +6,7 @@ This repository contains an AI-powered QA platform with:
 - A Next.js frontend that submits scans and renders detailed reports.
 - A modular tool + provider architecture with mistral model as core engine.
 
-For architecture details, see [architecure.md](./architecure.md).
+For architecture details, see [architecture.md](./architecture.md).
 
 <img width="1245" height="922" alt="Screenshot 2026-03-02 at 12 29 48" src="https://github.com/user-attachments/assets/d3dca893-9b37-4f83-a08e-9b518fcb93cd" />
 
