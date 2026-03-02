@@ -1,15 +1,17 @@
-# QA Bot - Full System Documentation
+# QA Agent - Full System Documentation
 
 This repository contains an AI-powered QA platform with:
+
 - A Python/FastAPI backend that orchestrates LLM-guided QA runs and executes QA tools.
 - A Next.js frontend that submits scans and renders detailed reports.
-- A modular tool + provider architecture so you can add new checks and models.
+- A modular tool + provider architecture with mistral model as core engine.
 
 For architecture details, see [architecure.md](./architecure.md).
 
 ## 1. What This System Does
 
 Given a target URL, the system can run an autonomous QA mission that checks:
+
 - Functional behavior (links, forms, button/action patterns, auth/session flows)
 - UX and accessibility risk signals
 - Performance metrics
@@ -17,6 +19,7 @@ Given a target URL, the system can run an autonomous QA mission that checks:
 - Browser network/console evidence
 
 It returns:
+
 - Structured issues (severity, category, reproducible steps)
 - Tool outputs and execution trace
 - Screenshots (served by backend)
@@ -25,13 +28,15 @@ It returns:
 ## 2. Tech Stack
 
 Backend:
+
 - Python 3.11+
 - FastAPI + Uvicorn
-- Playwright (headless browser automation)
+- Playwright
 - Pydantic / pydantic-settings
 - LLM providers: Mistral, Hugging Face
 
 Frontend:
+
 - Next.js 15 (App Router)
 - React 18
 - TypeScript
@@ -77,7 +82,7 @@ API_AUTH_SECRET=replace_with_long_random_secret
 
 Backend reads these via `server/config.py`.
 
-Frontend environment variables (`web/.env.local`):
+Frontend environment variables (`web/.env`):
 
 ```env
 NEXT_PUBLIC_QA_API_URL=http://localhost:8000/api/qa
@@ -85,6 +90,7 @@ NEXT_PUBLIC_QA_API_KEY=replace_with_same_api_auth_secret
 ```
 
 Important:
+
 - `NEXT_PUBLIC_QA_API_KEY` must match backend `API_AUTH_SECRET`.
 - If `PROVIDER_API_KEY` is missing, backend QA execution fails by design.
 
@@ -103,6 +109,7 @@ uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Backend endpoints:
+
 - Root health: `GET /`
 - QA endpoint: `POST /api/qa`
 - Screenshots static path: `/screenshots/*`
@@ -134,69 +141,7 @@ Default frontend URL: `http://localhost:3000`
 8. Backend returns issues + trace + screenshot URLs.
 9. Frontend adapts backend response into report model and renders `/qa/results`.
 
-## 8. API Contract
-
-### `POST /api/qa`
-
-Required header:
-- `X-API-KEY: <API_AUTH_SECRET>` (header name is configurable)
-
-Request body:
-
-```json
-{
-  "url": "https://example.com",
-  "context": {"mission": "autonomous_scan"},
-  "device_profile": "desktop",
-  "network_profile": "wifi",
-  "selected_tools": ["dead_link_checker", "form_validator"]
-}
-```
-
-Response body (shape):
-
-```json
-{
-  "url": "https://example.com",
-  "issues": [],
-  "tool_outputs": [],
-  "screenshots": [],
-  "raw_model_output": "...",
-  "trace": []
-}
-```
-
-## 9. Available Tool Keys
-
-- `dead_link_checker`
-- `form_validator`
-- `button_click_checker`
-- `login_flow_checker`
-- `session_persistence_checker`
-- `accessibility_audit`
-- `responsive_layout_checker`
-- `touch_target_checker`
-- `network_monitor`
-- `console_watcher`
-- `seo_metadata_checker`
-- `performance_audit`
-- `ssl_audit`
-- `security_headers_audit`
-- `security_content_audit`
-
-Notes:
-- Some tools are static HTML/HTTP analyzers.
-- Others depend on the Playwright browser runtime.
-
-## 10. Security Model
-
-- API key authentication is required on `/api/*` routes.
-- CORS origins are configurable.
-- Trusted hosts can be enforced.
-- HTTPS redirect can be enabled.
-- In production, strict security settings should be validated and secrets rotated.
-
-## 11. Development and Quality Commands
+## 8. Development and Quality Commands
 
 Backend checks:
 
@@ -214,20 +159,10 @@ npm run typecheck
 npm run lint
 ```
 
-## 12. Common Failure Modes
-
-- `401 Invalid API Key`
-  - Header value does not match backend secret.
-- `Provider API key not set`
-  - `PROVIDER_API_KEY` missing in backend environment.
-- Playwright startup errors on Windows event loop
-  - Ensure proper event loop policy and Playwright browser install.
-- No tools initialized
-  - `selected_tools` empty or invalid keys.
-
-## 13. Extending the System
+## 9. Extending the System
 
 Add a new tool:
+
 1. Implement class extending `BaseTool`.
 2. Register it in `engine/tools/maps.py`.
 3. Add request schema key in `server/schemas.py` (`ToolKey` literal).
@@ -235,10 +170,7 @@ Add a new tool:
 5. Add tests under `tests/`.
 
 Add a new provider:
+
 1. Implement `BaseLLMProvider`.
 2. Register in `ProviderRegistry`.
 3. Set `PROVIDER_NAME` and `PROVIDER_MODEL` in environment.
-
-## 14. License and Ownership
-
-Add your organization license and contribution policy here.
